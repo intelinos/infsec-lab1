@@ -1,23 +1,27 @@
-name: CI
+name: CI/CD Python OWASP Scan
 
 on:
   push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Клонируем репозиторий
       - uses: actions/checkout@v4
 
+      # 2. Настраиваем Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
+      # 3. Кэшируем pip
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -26,44 +30,40 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      # 4. Устанавливаем зависимости Python
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Bandit (SAST)
+      # 5. Скачиваем и запускаем OWASP Dependency-Check CLI
+      - name: Download OWASP Dependency-Check
         run: |
-          pip install bandit
-          bandit -r app -f json -o bandit-report.json || true
-
-      - name: Install OWASP Dependency-Check
-        run: |
-          curl -L https://github.com/jeremylong/DependencyCheck/releases/download/v8.4.2/dependency-check-8.4.2-release.zip -o dependency-check.zip
+          LATEST=$(curl -s https://api.github.com/repos/jeremylong/DependencyCheck/releases/latest \
+            | grep "browser_download_url.*dependency-check-.*-release.zip" \
+            | head -n 1 \
+            | cut -d '"' -f 4)
+          echo "Downloading: $LATEST"
+          curl -L $LATEST -o dependency-check.zip
           unzip dependency-check.zip -d dependency-check
           chmod +x dependency-check/dependency-check/bin/dependency-check.sh
 
-      - name: Run OWASP Dependency-Check (SCA)
+      - name: Run OWASP Dependency-Check
         run: |
+          mkdir reports
           dependency-check/dependency-check/bin/dependency-check.sh \
             --project "Python Project" \
             --scan . \
-            --enableExperimental \
-            --format "JSON" \
-            --out dependency-check-report.json \
-            --scan-requirements requirements.txt
+            --format JSON \
+            --out reports \
+            --enableExperimental
 
-      - name: Upload Bandit report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: bandit-report
-          path: bandit-report.json
-          if-no-files-found: warn
 
+      # 6. Загружаем отчёт как артефакт
       - name: Upload Dependency-Check report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dependency-check-report
-          path: dependency-check-report.json
+          path: dependency-check-report/dependency-check-report.json
           if-no-files-found: warn
