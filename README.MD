@@ -209,7 +209,7 @@ def decode_access_token(token: str) -> str:
 4. Сохранение отчётов как artifacts
 
 Отчет Bandit (SAST):
-
+![alt text](image.png)
 
 Отчет OWASP Dependency-Check:
 

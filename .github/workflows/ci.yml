@@ -23,8 +23,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install bandit safety jq
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        fi
+        pip install bandit safety
 
     - name: Create reports directory
       run: mkdir -p reports
@@ -32,19 +34,30 @@ jobs:
     - name: Run Bandit SAST
       continue-on-error: true
       run: |
-        bandit -r app/ -f json -o reports/bandit-report.json
-        bandit -r app/ -f txt -o reports/bandit-report.txt
+        # Проверяем существование директории app
+        if [ -d "app" ]; then
+          bandit -r app/ -f json -o reports/bandit-report.json
+          bandit -r app/ -f txt -o reports/bandit-report.txt
+        else
+          echo "Директория 'app' не найдена. Сканируем текущую директорию."
+          bandit -r ./ -f json -o reports/bandit-report.json
+          bandit -r ./ -f txt -o reports/bandit-report.txt
+        fi
         echo "### Bandit SAST Report" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-        cat reports/bandit-report.txt >> $GITHUB_STEP_SUMMARY
+        if [ -f reports/bandit-report.txt ]; then
+          cat reports/bandit-report.txt >> $GITHUB_STEP_SUMMARY
+        fi
         echo '```' >> $GITHUB_STEP_SUMMARY
 
     - name: Run Safety SCA
       continue-on-error: true
       run: |
-        # Используем правильный синтаксис для safety
-        safety check --json --output-file reports/safety-report.json || true
-        safety check > reports/safety-report.txt 2>&1 || true
+        # Генерируем JSON отчет
+        safety check --json > reports/safety-report.json 2>&1 || true
+        
+        # Генерируем текстовый отчет
+        safety check --output text > reports/safety-report.txt 2>&1 || true
         
         echo "### Safety SCA Report" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
