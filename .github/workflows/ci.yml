@@ -43,7 +43,100 @@ jobs:
           unzip dependency-check.zip -d dependency-check
           chmod +x dependency-check/dependency-check/bin/dependency-check.sh
 
-            # OWASP Dependency-Check через готовый Docker Action
+            # OWASP Dependenname: Security CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scanning
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install bandit safety
+
+    - name: Create reports directory
+      run: mkdir -p reports
+
+    - name: Run Bandit SAST
+      continue-on-error: true
+      run: |
+        bandit -r app/ -f json -o reports/bandit-report.json
+        bandit -r app/ -f txt -o reports/bandit-report.txt
+        echo "### Bandit SAST Report" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        cat reports/bandit-report.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+    - name: Run Safety SCA
+      continue-on-error: true
+      run: |
+        safety check --json --output reports/safety-report.json || true
+        safety check --output text > reports/safety-report.txt || true
+        echo "### Safety SCA Report" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        cat reports/safety-report.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+    - name: Upload Bandit Report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: bandit-security-report
+        path: reports/bandit-report.*
+
+    - name: Upload Safety Report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: safety-security-report
+        path: reports/safety-report.*
+
+    - name: Check Bandit Results
+      run: |
+        if [ -f reports/bandit-report.json ]; then
+          echo "Bandit scan completed"
+          python -c "import json; data=json.load(open('reports/bandit-report.json')); print(f'Found {len(data.get(\"results\", []))} issues')"
+        fi
+
+  dependency-check:
+    runs-on: ubuntu-latest
+    name: OWASP Dependency Check
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run OWASP Dependency-Check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'secure-rest-api'
+        path: '.'
+        format: 'HTML'
+        out: 'reports'
+
+    - name: Upload Dependency-Check Report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: dependency-check-report
+        path: reports/dependency-check-report.htmlcy-Check через готовый Docker Action
       - name: Run Dependency-Check
         uses: dependency-check/Dependency-Check_Action@main
         with:
