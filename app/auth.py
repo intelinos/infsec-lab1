@@ -41,4 +41,5 @@ def login(login_req: LoginRequest, db: Session = Depends(get_db)):
         # Broken authentication -> respond with 401, do not leak which field was wrong
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     token, expire = security.create_access_token(subject=user.username)
-    return {"token": f"Bearer {token}", "expiresAt": expire}
+    return {"access_token": {token}, "token_type": "bearer", "expiresAt": expire}
+
