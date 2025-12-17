@@ -24,7 +24,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install bandit safety
+        pip install bandit safety jq
 
     - name: Create reports directory
       run: mkdir -p reports
@@ -42,11 +42,15 @@ jobs:
     - name: Run Safety SCA
       continue-on-error: true
       run: |
-        safety check --json --output reports/safety-report.json || true
-        safety check --output text > reports/safety-report.txt || true
+        # Используем правильный синтаксис для safety
+        safety check --json --output-file reports/safety-report.json || true
+        safety check > reports/safety-report.txt 2>&1 || true
+        
         echo "### Safety SCA Report" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-        cat reports/safety-report.txt >> $GITHUB_STEP_SUMMARY
+        if [ -f reports/safety-report.txt ]; then
+          cat reports/safety-report.txt >> $GITHUB_STEP_SUMMARY
+        fi
         echo '```' >> $GITHUB_STEP_SUMMARY
 
     - name: Upload Bandit Report
@@ -92,11 +96,3 @@ jobs:
       with:
         name: dependency-check-report
         path: reports/dependency-check-report.html
-
-    - name: Upload All Reports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: all-security-reports
-        path: reports/
-        if-no-files-found: warn
