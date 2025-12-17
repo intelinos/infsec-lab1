@@ -91,27 +91,12 @@ jobs:
       if: always()
       with:
         name: dependency-check-report
-        path: reports/dependency-check-report.htmlcy-Check через готовый Docker Action
-      - name: Run Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          project: "Python Project"
-          path: .
-          format: "HTML"
-          out: "reports"
+        path: reports/dependency-check-report.html
 
-      - name: Upload Dependency-Check report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dependency-check-report
-          path: reports
-          if-no-files-found: warn
-
-      - name: Upload Bandit report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: bandit-report
-          path: bandit-report.json
-          if-no-files-found: warn
+    - name: Upload All Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: all-security-reports
+        path: reports/
+        if-no-files-found: warn
