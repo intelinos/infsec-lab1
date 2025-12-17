@@ -202,6 +202,11 @@ def decode_access_token(token: str) -> str:
 
 ## CI/CD
 
+##  Ссылка на последний успешный запуск pipeline в репозитории.
+
+https://github.com/intelinos/infsec-lab1/actions/runs/20299855647/
+
+
 Пайплайн GitHub Actions включает при каждом push и pull-request:
 1. Установку зависимостей
 2. Запуск Bandit (SAST)
