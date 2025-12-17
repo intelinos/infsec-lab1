@@ -7,4 +7,4 @@ python-jose[cryptography]>=3.4.0
 pydantic==1.10.11
 markupsafe==2.1.3
 starlette>=0.49.1
-ecds==0.19.1
+ecdsa==0.19.1
