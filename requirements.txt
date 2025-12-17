@@ -3,7 +3,7 @@ uvicorn[standard]==0.22.0
 SQLAlchemy==2.0.44
 python-dotenv==1.0.0
 passlib[bcrypt]==1.7.4
-python-jose[cryptography]==3.5.0
+pyjwt[crypto]
 cryptography==46.0.3
 pydantic==1.10.11
 markupsafe==2.1.3

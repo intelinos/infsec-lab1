@@ -1,7 +1,8 @@
 import os
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
-from jose import jwt, JWTError
+import jwt
+from jwt.exceptions import InvalidTokenError, ExpiredSignatureError, DecodeError
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -32,5 +33,5 @@ def decode_access_token(token: str) -> str:
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
         return payload.get("sub")
-    except JWTError:
+    except (InvalidTokenError, ExpiredSignatureError, DecodeError):
         return None
