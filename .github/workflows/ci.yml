@@ -1,27 +1,23 @@
-name: CI/CD Python OWASP Scan
+name: CI
 
 on:
   push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Клонируем репозиторий
       - uses: actions/checkout@v4
 
-      # 2. Настраиваем Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      # 3. Кэшируем pip
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -30,40 +26,51 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # 4. Устанавливаем зависимости Python
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 5. Скачиваем и запускаем OWASP Dependency-Check CLI
-      - name: Download OWASP Dependency-Check
+      - name: Run Bandit (SAST)
         run: |
-          LATEST=$(curl -s https://api.github.com/repos/jeremylong/DependencyCheck/releases/latest \
-            | grep "browser_download_url.*dependency-check-.*-release.zip" \
-            | head -n 1 \
-            | cut -d '"' -f 4)
-          echo "Downloading: $LATEST"
-          curl -L $LATEST -o dependency-check.zip
+          pip install bandit
+          bandit -r app -f json -o bandit-report.json || true
+
+      - name: Install OWASP Dependency-Check
+        run: |
+          curl -L https://github.com/jeremylong/DependencyCheck/releases/download/v8.4.2/dependency-check-8.4.2-release.zip -o dependency-check.zip
           unzip dependency-check.zip -d dependency-check
           chmod +x dependency-check/dependency-check/bin/dependency-check.sh
 
-      - name: Run OWASP Dependency-Check
-        run: |
-          mkdir reports
-          dependency-check/dependency-check/bin/dependency-check.sh \
-            --project "Python Project" \
-            --scan . \
-            --format JSON \
-            --out reports \
-            --enableExperimental
+            # OWASP Dependency-Check через готовый Docker Action
+      - name: Run Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "Python Project"
+          path: .
+          format: "HTML"
+          out: "reports"
 
-
-      # 6. Загружаем отчёт как артефакт
       - name: Upload Dependency-Check report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dependency-check-report
-          path: dependency-check-report/dependency-check-report.json
+          path: reports
+          if-no-files-found: warn
+
+      - name: Upload Bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+          if-no-files-found: warn
+
+      - name: Upload Dependency-Check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: dependency-check-report.json
           if-no-files-found: warn
